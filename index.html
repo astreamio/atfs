@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attribute Table Flight Simulator</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; background-color: #000011; color: #eee; }
+        #info { position: absolute; top: 10px; width: 100%; text-align: center; z-index: 100; padding: 10px; color: #fff; }
+        #score-display { position: absolute; top: 10px; right: 20px; font-size: 1.5em; color: #FFD700; z-index: 100; background-color: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 5px;}
+        #controls-info { position: absolute; bottom: 10px; left: 10px; background-color: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; font-size: 0.9em; color: #fff; z-index: 100;}
+        button { padding: 10px 15px; font-size: 1em; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;}
+        button:hover { background-color: #45a049; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.8em; display: none; background-color: rgba(0,0,0,0.8); padding: 20px 30px; border-radius: 10px; color: #fff; text-align: center; z-index: 102; }
+        #crash-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2em; display: none; background-color: rgba(20, 30, 40, 0.95); padding: 20px 30px; border-radius: 10px; color: #ecf0f1; text-align: center; z-index: 101; box-shadow: 0 0 20px rgba(0,0,0,0.5); width: 90%; max-width: 480px; white-space: pre-line; }
+        #crash-message h2 { color: #e74c3c; margin-top: 0; margin-bottom: 10px; font-size: 2em; }
+        #crash-achievements-list { list-style: none; padding: 0; text-align: left; max-height: 180px; /* Adjusted height */ overflow-y: auto; border-top: 1px solid #34495e; margin-top: 15px; padding-top: 10px; }
+        #crash-achievements-list li { padding: 6px 0; font-size: 0.85em; border-bottom: 1px dashed #34495e; }
+        #crash-achievements-list li:last-child { border-bottom: none; }
+        .achieved-rank-on-crash { font-weight: bold; color: #FFD700; background-color: rgba(255, 215, 0, 0.15); padding: 3px 6px; border-radius: 4px; display: block; }
+        .locked-rank-on-crash { color: #7f8c8d; opacity: 0.6; }
+        #achievement-toast { position: fixed; bottom: 20px; right: 20px; background-color: #2c3e50; color: #ecf0f1; padding: 15px 25px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 105; display: none; opacity: 0; transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out; transform: translateY(20px); max-width: 400px; }
+        #achievement-toast.show { display: block; opacity: 1; transform: translateY(0); }
+        #achievement-title { font-size: 1.2em; font-weight: bold; margin-bottom: 8px; color: #3498db; }
+        #achievement-definition { font-size: 0.9em; line-height: 1.4; }
+        #toggleAchievementsButton { position: absolute; bottom: 10px; right: 20px; z-index: 100; background-color: #34495e; }
+        #toggleAchievementsButton:hover { background-color: #2c3e50; }
+        #all-achievements-list { display: none; position: absolute; bottom: 50px; right: 20px; background-color: rgba(30, 40, 50, 0.95); color: #ecf0f1; padding: 20px; border-radius: 8px; max-height: 70vh; overflow-y: auto; z-index: 104; border: 1px solid #566573; width: 400px; box-shadow: 0 0 20px rgba(0,0,0,0.4); }
+        #all-achievements-list h3 { margin-top: 0; color: #5dade2; border-bottom: 1px solid #5dade2; padding-bottom: 8px; text-align: center; }
+        #all-achievements-list ul { list-style: none; padding: 0; margin: 0; }
+        #all-achievements-list li { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #4a6072; }
+        #all-achievements-list li:last-child { border-bottom: none; margin-bottom: 0; }
+        #crash-message button { margin-top: 20px; margin-left: 0; }
+
+        /* Rules Modal Styles */
+        #rules-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.88); /* Darker overlay */
+            display: none; /* Initially hidden, shown by JS */
+            justify-content: center;
+            align-items: center;
+            z-index: 200; /* Ensure it's on top */
+            color: #e0e0e0; /* Lighter text for readability */
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #rules-content {
+            background-color: #181f28; /* Darker content background */
+            padding: 25px 35px;
+            border-radius: 12px;
+            max-width: 650px; /* Slightly wider */
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid #4a5a70; /* Softer border */
+            box-shadow: 0 5px 30px rgba(0,0,0,0.6); /* More pronounced shadow */
+            text-align: left;
+        }
+        #rules-content h2 {
+            color: #6bb9f0; /* Brighter title */
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #6bb9f0;
+            padding-bottom: 12px;
+            font-size: 1.8em;
+        }
+        #rules-content h3 { /* For sub-sections like "Key Rules" */
+            color: #f0ad4e; /* Warning/info color */
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+         #rules-content h4 { /* For Controls title */
+            color: #c5c5c5;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
+        }
+        #rules-content ul {
+            list-style-type: none; /* Using custom bullets or none */
+            padding-left: 0;
+            margin-bottom: 18px;
+        }
+        #rules-content li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+            padding-left: 20px; /* Space for pseudo-element bullet */
+            position: relative;
+        }
+        #rules-content li::before { /* Custom bullet */
+            content: "➤"; /* Or "•", "✔" */
+            position: absolute;
+            left: 0;
+            color: #6bb9f0; /* Bullet color */
+            font-size: 0.9em;
+        }
+        #rules-content p {
+            line-height: 1.7;
+            margin-bottom: 12px;
+            color: #b0b0b0; /* Slightly dimmer paragraph text */
+        }
+        #startGameButtonModal {
+            display: block;
+            width: auto;
+            padding: 12px 30px;
+            font-size: 1.15em;
+            font-weight: bold;
+            background-color: #2ecc71; /* Emerald green */
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 30px auto 10px auto; /* Center button */
+            transition: background-color 0.2s ease-out, transform 0.1s ease;
+        }
+        #startGameButtonModal:hover {
+            background-color: #27ae60; /* Darker emerald */
+            transform: translateY(-1px);
+        }
+         #startGameButtonModal:active {
+            transform: translateY(0px);
+        }
+
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h1>Attribute Table Flight Simulator</h1>
+    </div>
+    <div id="loading">Generating...</div>
+
+    <div id="rules-modal">
+        <div id="rules-content">
+            <h2>Game Rules & Controls</h2>
+            <p>Welcome to the Attribute Table Flight Simulator Challenge!</p>
+            
+            <h3>Key Rules:</h3>
+            <ul>
+                <li><strong>Objective:</strong> Fly the table through glowing hoops to score points.</li>
+                <li><strong>Ranking Up:</strong> Gather points to achieve higher ranks and unlock new titles.</li>
+                <li><strong>Table Integrity:</strong> If your score is zero, the table data rows will start disappearing one by one. Don't lose all your data!</li>
+                <li><strong>Score Decay:</strong> Your score will gradually decrease over time. Stay active and keep scoring to maintain your rank!</li>
+                <li><strong>Hoops:</strong> Regular hoops give points. Special purple hoops are worth more! Points awarded depend on the number of cells currently in your table.</li>
+            </ul>
+
+            <h4>Flight Controls:</h4>
+            <p style="text-align: center;">
+                W: Pitch Down / S: Pitch Up<br>
+                A: Yaw Left / D: Yaw Right<br>
+                Q: Roll Right / E: Roll Left<br>
+                Arrow Up: Accelerate / Arrow Down: Decelerate
+            </p>
+            <h4>Camera:</h4>
+            <p style="text-align: center;">Mouse Wheel: Zoom In / Out</p>
+
+            <button id="startGameButtonModal">Let's Fly!</button>
+        </div>
+    </div>
+
+    <div id="crash-message">
+        <h2 id="crash-title">GAME OVER</h2>
+        <p style="font-size: 0.7em; margin-bottom: 15px;">Your final score: <span id="final-score-on-crash">0</span></p>
+        <h4 style="margin-bottom: 5px; margin-top:0; color: #e67e22;">Rank Progress:</h4>
+        <ul id="crash-achievements-list"></ul>
+        <button id="generateButton">Rebuild Table & Reset Game</button>
+    </div>
+    <div id="achievement-toast">
+        <div id="achievement-title"></div>
+        <div id="achievement-definition"></div>
+    </div>
+    <div id="score-display">Score: 0</div>
+    <div id="controls-info">
+        <strong>Flight Controls:</strong><br>
+        W: Pitch Down / S: Pitch Up<br>
+        A: Yaw Left / D: Yaw Right<br>
+        Q: Roll Right / E: Roll Left<br>
+        Arrow Up: Accelerate / Arrow Down: Decelerate<br>
+        <strong>Mouse Wheel: Zoom</strong>
+    </div>
+    <button id="toggleAchievementsButton">Show Player Ranks</button>
+    <div id="all-achievements-list">
+        <h3>Player Rank Tiers</h3>
+        <ul id="achievements-ul"></ul>
+    </div>
+
+    <script type="importmap">
+        { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // Scene, camera, renderer, and core game variables
+        let scene, camera, renderer;
+        let tableGroup, cityGroup, hoopsGroup; 
+        let raycaster, mouse; 
+        let highlightedRowIndex = -1; 
+        const HIGHLIGHT_COLOR = new THREE.Color(0xffaa00); 
+        const HOOP_ACTIVE_COLOR = new THREE.Color(0x00dd00); 
+        const HOOP_PASSED_EFFECT_COLOR = new THREE.Color(0xffff00); 
+        const HOOP_PURPLE_COLOR = new THREE.Color(0x9b59b6); 
+        const HOOP_PURPLE_POINTS = 25; // Base points for purple hoops
+        const HOOP_REGULAR_POINTS = 10; // Base points for regular hoops
+        const PURPLE_HOOP_PROBABILITY = 0.2; 
+
+        const clock = new THREE.Clock(); 
+        let score = 0, hoops = []; 
+        const MAX_ACTIVE_HOOPS = 3, CITY_BOUNDS = 480; 
+        let tableCrashed = false; 
+        const GROUND_LEVEL = 0.5; 
+
+        let rowDisappearTimer = 0; 
+        const ROW_DISAPPEAR_INTERVAL = 15; 
+        let activeDataRowIndices = []; 
+
+        let scoreDecayTimer = 0; 
+        const SCORE_DECAY_INTERVAL = 15; 
+        const SCORE_DECAY_AMOUNT = 5; 
+
+        let unlockedAchievements = new Set(); 
+        let achievementToastTimeout = null; 
+
+        let tableFlightData = {
+            position: new THREE.Vector3(0, 50, 0), 
+            velocity: new THREE.Vector3(),          
+            rotation: new THREE.Quaternion(),       
+            keys: {},                               
+            thrust: 50,                            
+            maneuverSpeed: 1.5,                    
+            maxSpeed: 100,                         
+            minSpeed: 5,                           
+            currentSpeed: 20,                      
+            damping: 0.98,                         
+            liftFactor: 0.5,                       
+            cameraDistanceFactor: 1.0,             
+            minZoom: 0.3,                          
+            maxZoom: 3.0                           
+        };
+        const baseCameraOffset = new THREE.Vector3(0, 8, -25); 
+        let tableBoundingBox = new THREE.Box3(); 
+
+        const STATIC_ANIMAL_TABLE_DATA = [
+            { created_by: "Andreas", created_with: "Three.js", created_date: "2025" },
+            { created_by: "Häggström", created_with: "Google Gemini 2.5 Pro", created_date: "05" },
+            { created_by: "...", created_with: "FME", created_date: "30" },
+        ];
+        const tableHeaders = ["created_date", "created_with", "created_by"];
+
+        const PLAYER_RANKS = [
+            { level: 1, minScore: 1,    maxScore: 20,   title: "Level 1: Novice Builder 🛠️🧱", fmeTransformer: "Creator" },
+            { level: 2, minScore: 21,   maxScore: 40,   title: "Level 2: Data Scout 🗺️🔎", fmeTransformer: "FeatureReader" },
+            { level: 3, minScore: 41,   maxScore: 60,   title: "Level 3: Attribute Artisan ✨📝", fmeTransformer: "AttributeManager" },
+            { level: 4, minScore: 61,   maxScore: 80,   title: "Level 4: Logic Pathfinder ✅🧭", fmeTransformer: "Tester" },
+            { level: 5, minScore: 81,   maxScore: 100,  title: "Level 5: List Maestro 🎶📜", fmeTransformer: "ListExploder / ListBuilder" },
+            { level: 6, minScore: 101,  maxScore: 120,  title: "Level 6: Connection Ace 🤝🔗", fmeTransformer: "FeatureMerger" },
+            { level: 7, minScore: 121,  maxScore: 140,  title: "Level 7: Summary Synthesizer 📊💡", fmeTransformer: "Aggregator" },
+            { level: 8, minScore: 141,  maxScore: 160,  title: "Level 8: Geometry Shaper 📐🔵", fmeTransformer: "Bufferer" },
+            { level: 9, minScore: 161,  maxScore: 180,  title: "Level 9: Pattern Pioneer (RegEx) 🔍✍️", fmeTransformer: "StringSearcher" },
+            { level: 10, minScore: 181, maxScore: 200,  title: "Level 10: Query Crafter 📜❓", fmeTransformer: "SQLCreator" },
+            { level: 11, minScore: 201, maxScore: 225,  title: "Level 11: Database Virtuoso 💻🚀", fmeTransformer: "SQLExecutor" },
+            { level: 12, minScore: 226, maxScore: 250,  title: "Level 12: Record Keeper ✍️💾", fmeTransformer: "DatabaseUpdater" },
+            { level: 13, minScore: 251, maxScore: 275,  title: "Level 13: Table Architect 🏛️✏️", fmeTransformer: "FeatureWriter" },
+            { level: 14, minScore: 276, maxScore: 300,  title: "Level 14: Integrity Inspector 🛡️✔️", fmeTransformer: "AttributeValidator" },
+            { level: 15, minScore: 301, maxScore: 325,  title: "Level 15: Spatial Strategist 🌍🤝", fmeTransformer: "SpatialFilter" },
+            { level: 16, minScore: 326, maxScore: 350,  title: "Level 16: Schema Sculptor 🗺️🔄", fmeTransformer: "SchemaMapper" },
+            { level: 17, minScore: 351, maxScore: 375,  title: "Level 17: Change Detective 🕵️‍♂️🔄", fmeTransformer: "ChangeDetector" },
+            { level: 18, minScore: 376, maxScore: 400,  title: "Level 18: JSON Journeyman 📜🧭", fmeTransformer: "JSONFragmenter" },
+            { level: 19, minScore: 401, maxScore: 425,  title: "Level 19: Relational Strategist 🧠🔗", fmeTransformer: "DatabaseJoiner" },
+            { level: 20, minScore: 426, maxScore: 450,  title: "Level 20: API Integrator 🌐🔌", fmeTransformer: "HTTPCaller" },
+            { level: 21, minScore: 451, maxScore: 485,  title: "Level 21: Geometric Refiner ✨📐", fmeTransformer: "Dissolver" },
+            { level: 22, minScore: 486, maxScore: 520,  title: "Level 22: Spreadsheet Sage 📊📜", fmeTransformer: "ExcelStyler" },
+            { level: 23, minScore: 521, maxScore: 560,  title: "Level 23: Automation Champion ⚙️🏆", fmeTransformer: "WorkspaceRunner" },
+            { level: 24, minScore: 561, maxScore: 600,  title: "Level 24: Custom Transformer Craftsman 🛠️✨", fmeTransformer: "Custom Transformer" },
+            { level: 25, minScore: 601, maxScore: 9999, title: "Level 25: Code Legend 🧙‍♂️🐍", fmeTransformer: "PythonCaller" }
+        ];
+        const BUILDING_COLORS_HEX = [0xf55215,0x14f550,0x002cf9,0x07d8ff,0xf5571b,0x00d7ff];
+
+        // Game state flags
+        let gameActive = false; 
+        let animationLoopStarted = false; 
+
+        function createTextCanvas(text, width, height, options = {}) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = width;
+            canvas.height = height;
+            ctx.fillStyle = options.backgroundColor || '#fff'; 
+            ctx.fillRect(0, 0, width, height);
+            ctx.font = options.font || '24px Arial'; 
+            ctx.fillStyle = options.textColor || '#000'; 
+            ctx.textAlign = options.textAlign || 'center';
+            ctx.textBaseline = options.textBaseline || 'middle';
+            const padding = options.padding || 10;
+            const maxWidth = width - (padding * 2);
+            if (ctx.measureText(text).width > maxWidth && text.includes(' ')) {
+                let words = text.split(' ');
+                let line = '';
+                let y = height / 2 - (parseInt(options.font) * 0.6); 
+                const lineHeight = parseInt(options.font) * 1.2;
+                for (let i = 0; i < words.length; i++) {
+                    let testLine = line + words[i] + ' ';
+                    if (ctx.measureText(testLine).width > maxWidth && i > 0) {
+                        ctx.fillText(line.trim(), width / 2, y);
+                        line = words[i] + ' ';
+                        y += lineHeight;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                ctx.fillText(line.trim(), width / 2, y);
+            } else {
+                ctx.fillText(text, width / 2, height / 2);
+            }
+            return canvas;
+        }
+
+        function create3DCell(text, cellWidth, cellHeight, cellDepth, rowIndex, colIndex, options = {}) {
+            const textCanvas = createTextCanvas(text, cellWidth * 100, cellHeight * 100, options); 
+            const texture = new THREE.CanvasTexture(textCanvas);
+            texture.needsUpdate = true;
+            const material = new THREE.MeshStandardMaterial({
+                map: texture,
+                roughness: 0.7,
+                metalness: 0.1,
+                side: THREE.DoubleSide 
+            });
+            const geometry = new THREE.BoxGeometry(cellWidth, cellHeight, cellDepth);
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.userData = { isCell: true, rowIndex: rowIndex, colIndex: colIndex, originalMaterial: material.clone() }; 
+            return mesh;
+        }
+
+        function buildTable() {
+            highlightedRowIndex = -1; 
+            tableCrashed = false; 
+            document.getElementById('crash-message').style.display = 'none';
+            rowDisappearTimer = 0; 
+            activeDataRowIndices = []; 
+            if (tableGroup) {
+                tableGroup.traverse(child => {
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) {
+                        if (child.material.map) child.material.map.dispose();
+                        child.material.dispose();
+                    }
+                });
+                scene.remove(tableGroup);
+            }
+            tableGroup = new THREE.Group();
+            tableGroup.position.copy(tableFlightData.position); 
+            tableGroup.quaternion.copy(tableFlightData.rotation); 
+            const animalData = STATIC_ANIMAL_TABLE_DATA;
+            const numRows = animalData.length;
+            const cellWidth = 2.5, cellHeight = 0.8, cellDepth = 0.1, gap = 0.15;
+            const totalTableWidth = tableHeaders.length * (cellWidth + gap) - gap;
+            const totalTableHeight = (numRows + 1) * (cellHeight + gap) - gap; 
+            const startX = -totalTableWidth / 2 + cellWidth / 2;
+            const startY = totalTableHeight / 2 - cellHeight / 2;
+            tableHeaders.forEach((headerText, colIndex) => {
+                const headerCell = create3DCell(headerText, cellWidth, cellHeight, cellDepth, -1, colIndex, {
+                    backgroundColor: '#3498db', textColor: '#ffffff', font: 'bold 26px Arial'
+                });
+                headerCell.position.set(startX + colIndex * (cellWidth + gap), startY, 0);
+                tableGroup.add(headerCell);
+            });
+            animalData.forEach((rowData, rowIndex) => {
+                activeDataRowIndices.push(rowIndex); 
+                tableHeaders.forEach((headerKey, colIndex) => {
+                    const cellText = String(rowData[headerKey] || 'N/A');
+                    const dataCell = create3DCell(cellText, cellWidth, cellHeight, cellDepth, rowIndex, colIndex, {
+                        backgroundColor: (rowIndex % 2 === 0) ? '#ecf0f1' : '#fdfefe', 
+                        textColor: '#333', font: '22px Arial'
+                    });
+                    dataCell.position.set(startX + colIndex * (cellWidth + gap), startY - (rowIndex + 1) * (cellHeight + gap), 0);
+                    tableGroup.add(dataCell);
+                });
+            });
+            scene.add(tableGroup);
+            const tableVisualWidth = totalTableWidth;
+            const tableVisualHeight = totalTableHeight;
+            const tableVisualDepth = 2; 
+            tableBoundingBox.setFromCenterAndSize(new THREE.Vector3(0, 0, 0), new THREE.Vector3(tableVisualWidth, tableVisualHeight, tableVisualDepth));
+        }
+
+        function removeRandomDataRow() {
+            if (tableCrashed || !tableGroup || activeDataRowIndices.length === 0) return;
+            const randomIndexInActiveArray = Math.floor(Math.random() * activeDataRowIndices.length);
+            const actualRowIndexToRemove = activeDataRowIndices[randomIndexInActiveArray];
+            const cellsToRemove = [];
+            tableGroup.children.forEach(child => {
+                if (child.userData && child.userData.isCell && child.userData.rowIndex === actualRowIndexToRemove) {
+                    cellsToRemove.push(child);
+                }
+            });
+            cellsToRemove.forEach(cell => {
+                tableGroup.remove(cell);
+                if (cell.geometry) cell.geometry.dispose();
+                if (cell.material) {
+                    if (cell.material.map) cell.material.map.dispose();
+                    cell.material.dispose();
+                }
+            });
+            activeDataRowIndices.splice(randomIndexInActiveArray, 1); 
+            if (activeDataRowIndices.length === 0) {
+                console.log("All table data rows have disappeared!");
+                triggerCrash("Table Content Vanished!");
+            }
+        }
+
+        function createCity() {
+            if (cityGroup) {
+                cityGroup.traverse(child => {
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) child.material.dispose();
+                });
+                scene.remove(cityGroup);
+            }
+            cityGroup = new THREE.Group();
+            const citySpread = CITY_BOUNDS + 20; 
+            const buildingDensity = 0.3; 
+            const gridStep = 20; 
+            const baseBuildingMaterial = new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0.15 });
+            const buildingGeometry = new THREE.BoxGeometry(1, 1, 1); 
+            for (let x = -citySpread; x < citySpread; x += gridStep) {
+                for (let z = -citySpread; z < citySpread; z += gridStep) {
+                    if (Math.random() < buildingDensity) {
+                        const buildingHeight = Math.random() * 80 + 10; 
+                        const buildingWidth = Math.random() * (gridStep * 0.7) + (gridStep * 0.3);
+                        const buildingDepth = Math.random() * (gridStep * 0.7) + (gridStep * 0.3);
+                        const buildingMaterial = baseBuildingMaterial.clone();
+                        const randomColorHex = BUILDING_COLORS_HEX[Math.floor(Math.random() * BUILDING_COLORS_HEX.length)];
+                        buildingMaterial.color.setHex(randomColorHex);
+                        const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+                        building.scale.set(buildingWidth, buildingHeight, buildingDepth);
+                        building.position.set(
+                            x + Math.random() * 5 - 2.5, 
+                            buildingHeight / 2,          
+                            z + Math.random() * 5 - 2.5
+                        );
+                        building.castShadow = true;
+                        building.receiveShadow = true;
+                        building.userData.boundingBox = new THREE.Box3().setFromObject(building); 
+                        cityGroup.add(building);
+                    }
+                }
+            }
+            const groundGeometry = new THREE.PlaneGeometry(citySpread * 2.5, citySpread * 2.5);
+            const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x282828, roughness: 0.9 });
+            const groundPlane = new THREE.Mesh(groundGeometry, groundMaterial);
+            groundPlane.rotation.x = -Math.PI / 2;
+            groundPlane.position.y = GROUND_LEVEL - 0.05; 
+            groundPlane.receiveShadow = true;
+            cityGroup.add(groundPlane);
+            scene.add(cityGroup);
+        }
+
+        function createHoopMesh(position, radius, tubeRadius, orientationQuaternion, isSpecial = false) {
+            const geometry = new THREE.TorusGeometry(radius, tubeRadius, 12, 32); 
+            let hoopColor, pointsValue;
+            if (isSpecial) {
+                hoopColor = HOOP_PURPLE_COLOR;
+                pointsValue = HOOP_PURPLE_POINTS; // Base points
+            } else {
+                hoopColor = HOOP_ACTIVE_COLOR;
+                pointsValue = HOOP_REGULAR_POINTS; // Base points
+            }
+            const material = new THREE.MeshPhongMaterial({
+                color: hoopColor,
+                emissive: hoopColor, 
+                emissiveIntensity: isSpecial ? 0.8 : 0.6,
+                shininess: isSpecial ? 100 : 90
+            });
+            const hoopMesh = new THREE.Mesh(geometry, material);
+            hoopMesh.position.copy(position);
+            if (orientationQuaternion) {
+                hoopMesh.quaternion.copy(orientationQuaternion);
+            }
+            // Store base points, actual scored points will be calculated dynamically
+            hoopMesh.userData = { isHoop: true, passed: false, radius: radius, basePoints: pointsValue, isSpecial: isSpecial };
+            return hoopMesh;
+        }
+
+        function spawnNewHoop() {
+            if (!tableGroup || hoops.length >= MAX_ACTIVE_HOOPS || tableCrashed) return;
+            const minSpawnDistance = 80;
+            const maxSpawnDistance = 150;
+            const baseHoopRadius = 7;
+            const baseHoopTubeRadius = 0.5;
+            const maxPlacementAttempts = 10;
+            let newHoopMesh = null;
+            let attempts = 0;
+            const isSpecial = Math.random() < PURPLE_HOOP_PROBABILITY;
+            while (!newHoopMesh && attempts < maxPlacementAttempts) {
+                attempts++;
+                const spawnDistance = Math.random() * (maxSpawnDistance - minSpawnDistance) + minSpawnDistance;
+                const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(tableGroup.quaternion);
+                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(tableGroup.quaternion);
+                const up = new THREE.Vector3(0, 1, 0).applyQuaternion(tableGroup.quaternion);
+                const randomHorizontalAngle = (Math.random() - 0.5) * Math.PI * 0.4; 
+                const randomVerticalAngle = (Math.random() - 0.5) * Math.PI * 0.3;   
+                let spawnDirection = forward.clone();
+                spawnDirection.applyAxisAngle(up, randomHorizontalAngle);
+                spawnDirection.applyAxisAngle(right, randomVerticalAngle);
+                let candidateHoopPosition = tableGroup.position.clone().add(spawnDirection.multiplyScalar(spawnDistance));
+                candidateHoopPosition.x = Math.max(-CITY_BOUNDS, Math.min(CITY_BOUNDS, candidateHoopPosition.x));
+                candidateHoopPosition.z = Math.max(-CITY_BOUNDS, Math.min(CITY_BOUNDS, candidateHoopPosition.z));
+                candidateHoopPosition.y = Math.max(15, Math.min(80, candidateHoopPosition.y)); 
+                const currentHoopRadius = baseHoopRadius + Math.random() * 5 + (isSpecial ? 2 : 0); 
+                const currentHoopTube = baseHoopTubeRadius + currentHoopRadius * 0.05;
+                const hoopCheckSphere = new THREE.Sphere(candidateHoopPosition, currentHoopRadius + currentHoopTube);
+                let collisionWithBuilding = false;
+                if (cityGroup) {
+                    for (const building of cityGroup.children) {
+                        if (building.userData.boundingBox && building.geometry.type === "BoxGeometry") { 
+                            if (building.userData.boundingBox.intersectsSphere(hoopCheckSphere)) {
+                                collisionWithBuilding = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (!collisionWithBuilding) {
+                    let hoopUpVector = Math.random() > 0.5 ? up.clone() : right.clone(); 
+                    if (Math.abs(spawnDirection.dot(hoopUpVector)) > 0.95) { 
+                        hoopUpVector = new THREE.Vector3(0, 1, 0); 
+                        if (Math.abs(spawnDirection.dot(hoopUpVector)) > 0.95) { 
+                             hoopUpVector = new THREE.Vector3(1,0,0); 
+                        }
+                    }
+                    const tempLookAt = candidateHoopPosition.clone().add(spawnDirection); 
+                    const hoopOrientation = new THREE.Quaternion().setFromRotationMatrix(
+                        new THREE.Matrix4().lookAt(candidateHoopPosition, tempLookAt, hoopUpVector)
+                    );
+                    newHoopMesh = createHoopMesh(candidateHoopPosition, currentHoopRadius, currentHoopTube, hoopOrientation, isSpecial);
+                }
+            }
+            if (newHoopMesh) {
+                hoopsGroup.add(newHoopMesh);
+                hoops.push(newHoopMesh);
+            }
+        }
+
+        function setupInitialHoops() {
+            if (hoopsGroup) {
+                hoopsGroup.traverse(child => {
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) child.material.dispose();
+                });
+                scene.remove(hoopsGroup);
+            }
+            hoopsGroup = new THREE.Group();
+            hoops = [];
+            for (let i = 0; i < MAX_ACTIVE_HOOPS; i++) {
+                const spawnDistance = 60 + i * 40; 
+                let position = new THREE.Vector3(
+                    (Math.random() - 0.5) * spawnDistance * 0.5, 
+                    30 + Math.random() * 30,                     
+                    -spawnDistance                               
+                );
+                const initialOrientation = new THREE.Quaternion(); 
+                const isThisInitialHoopSpecial = (i === 0 && Math.random() < 0.3) || (i > 0 && Math.random() < PURPLE_HOOP_PROBABILITY * 0.3);
+                const hoop = createHoopMesh(position, 8 + Math.random() * 4, 0.5 + Math.random() * 0.3, initialOrientation, isThisInitialHoopSpecial);
+                hoopsGroup.add(hoop);
+                hoops.push(hoop);
+            }
+            scene.add(hoopsGroup);
+        }
+
+        function resetGame() {
+            const SAFE_START_Y = 100; 
+            tableFlightData.position.set(0, SAFE_START_Y, 0);
+            tableFlightData.velocity.set(0, 0, 0);
+            tableFlightData.rotation.identity();
+            tableFlightData.currentSpeed = 20; 
+            tableFlightData.cameraDistanceFactor = 1.0; 
+            tableCrashed = false;
+            document.getElementById('crash-message').style.display = 'none';
+            if (tableGroup) {
+                tableGroup.position.copy(tableFlightData.position);
+                tableGroup.quaternion.copy(tableFlightData.rotation);
+                tableGroup.visible = true; 
+            }
+            score = 0;
+            document.getElementById('score-display').textContent = `Score: ${score}`;
+            setupInitialHoops(); 
+            rowDisappearTimer = 0;
+            scoreDecayTimer = 0;
+            unlockedAchievements.clear();
+            document.getElementById('achievement-toast').classList.remove('show');
+            if (achievementToastTimeout) clearTimeout(achievementToastTimeout);
+            document.getElementById('all-achievements-list').style.display = 'none';
+            document.getElementById('toggleAchievementsButton').textContent = 'Show Player Ranks';
+        }
+
+        function handleKeyDown(event) {
+            if (!tableCrashed && gameActive) { // Only allow controls if game is active
+                tableFlightData.keys[event.code] = true;
+            }
+        }
+
+        function handleKeyUp(event) {
+            tableFlightData.keys[event.code] = false;
+        }
+
+        function handleMouseWheel(event) {
+            if (!gameActive) return; // Only allow zoom if game is active
+            event.preventDefault(); 
+            const zoomSpeed = 0.1;
+            if (event.deltaY < 0) { 
+                tableFlightData.cameraDistanceFactor -= zoomSpeed;
+            } else { 
+                tableFlightData.cameraDistanceFactor += zoomSpeed;
+            }
+            tableFlightData.cameraDistanceFactor = Math.max(tableFlightData.minZoom, Math.min(tableFlightData.maxZoom, tableFlightData.cameraDistanceFactor));
+        }
+
+        function triggerCrash(crashReason = "CRASHED!") {
+            if (tableCrashed) return; 
+            tableCrashed = true;
+            gameActive = false; 
+            tableFlightData.velocity.set(0, 0, 0); 
+            tableFlightData.currentSpeed = 0;
+            const crashMsgEl = document.getElementById('crash-message');
+            const crashTitleEl = document.getElementById('crash-title');
+            const finalScoreEl = document.getElementById('final-score-on-crash');
+            const achievementsListUl = document.getElementById('crash-achievements-list');
+            crashTitleEl.textContent = crashReason;
+            finalScoreEl.textContent = score;
+            achievementsListUl.innerHTML = ''; 
+            let highestAchievedRankThisSession = null;
+            PLAYER_RANKS.forEach(rank => {
+                const li = document.createElement('li');
+                let rankText = `${rank.title} (Score: ${rank.minScore}${rank.maxScore === 9999 ? '+' : ' - ' + rank.maxScore})`;
+                if (unlockedAchievements.has(rank.title)) {
+                    if (!highestAchievedRankThisSession || rank.level > highestAchievedRankThisSession.level) {
+                        highestAchievedRankThisSession = rank;
+                    }
+                } else {
+                    li.classList.add('locked-rank-on-crash');
+                }
+                li.textContent = rankText;
+                achievementsListUl.appendChild(li);
+            });
+            if (highestAchievedRankThisSession) {
+                 achievementsListUl.childNodes.forEach(liNode => {
+                    liNode.classList.remove('achieved-rank-on-crash'); 
+                    if (liNode.textContent.startsWith(highestAchievedRankThisSession.title)) {
+                        liNode.classList.add('achieved-rank-on-crash');
+                    }
+                });
+            } else if (score > 0) { 
+                for (let i = PLAYER_RANKS.length - 1; i >= 0; i--) {
+                    const rank = PLAYER_RANKS[i];
+                    if (score >= rank.minScore) {
+                         achievementsListUl.childNodes.forEach(liNode => {
+                            if (liNode.textContent.startsWith(rank.title)) {
+                                liNode.classList.remove('locked-rank-on-crash');
+                                liNode.classList.add('achieved-rank-on-crash');
+                            }
+                        });
+                        break;
+                    }
+                }
+            } else { 
+                const li = document.createElement('li');
+                li.textContent = "No ranks achieved this round.";
+                li.style.textAlign = "center";
+                li.style.fontStyle = "italic";
+                li.style.color = "#95a5a6";
+                achievementsListUl.appendChild(li);
+            }
+            crashMsgEl.style.display = 'block';
+            if (tableGroup) {
+                tableGroup.rotateX(Math.random() * 0.5 - 0.25);
+                tableGroup.rotateZ(Math.random() * 0.5 - 0.25);
+            }
+            hoops.forEach(hoop => {
+                if (hoop.material) {
+                    hoop.material.opacity = 0.3;
+                    hoop.material.transparent = true;
+                    hoop.material.emissiveIntensity = 0; 
+                }
+            });
+            document.getElementById('achievement-toast').classList.remove('show');
+            if (achievementToastTimeout) clearTimeout(achievementToastTimeout);
+        }
+
+        function checkCrashCollisions() {
+            if (tableCrashed || !tableGroup || !cityGroup) return;
+            if (tableGroup.position.y <= GROUND_LEVEL + (tableBoundingBox.getSize(new THREE.Vector3()).y / 2 * 0.8) ) { 
+                 if (tableFlightData.velocity.y < -1 || tableGroup.position.y <= GROUND_LEVEL) { 
+                    triggerCrash("Crashed into Ground!");
+                    if (tableGroup) tableGroup.position.y = GROUND_LEVEL + (tableBoundingBox.getSize(new THREE.Vector3()).y / 2 * 0.8); 
+                    return;
+                 }
+            }
+            const currentTableWorldBox = tableBoundingBox.clone().applyMatrix4(tableGroup.matrixWorld);
+            for (const building of cityGroup.children) {
+                if (building.userData.boundingBox && building.geometry.type === "BoxGeometry") { 
+                    if (currentTableWorldBox.intersectsBox(building.userData.boundingBox)) {
+                        triggerCrash("🎮 Game Over✈️   \n ⏰Back to Work 💻");
+                        return;
+                    }
+                }
+            }
+        }
+
+        function checkAndDisplayRankUp() {
+            if (tableCrashed) return;
+            const achievementToast = document.getElementById('achievement-toast');
+            const achievementTitleEl = document.getElementById('achievement-title');
+            const achievementDefinitionEl = document.getElementById('achievement-definition');
+            for (const rank of PLAYER_RANKS) {
+                if (score >= rank.minScore && score <= rank.maxScore) { 
+                    if (!unlockedAchievements.has(rank.title)) { 
+                        unlockedAchievements.add(rank.title);
+                        achievementTitleEl.textContent = `Rank Up! You are now: ${rank.title}`;
+                        achievementDefinitionEl.textContent = `Transformer level: ${rank.fmeTransformer}`; // Kept user's change
+                        achievementToast.classList.add('show');
+                        if (achievementToastTimeout) clearTimeout(achievementToastTimeout); 
+                        achievementToastTimeout = setTimeout(() => {
+                            achievementToast.classList.remove('show');
+                        }, 7000); 
+                        break; 
+                    }
+                }
+            }
+        }
+
+        function checkHoopCollisions() {
+            if (tableCrashed || !tableGroup || hoops.length === 0) return;
+            const tableCenter = tableGroup.position.clone();
+            const tableForwardOffset = new THREE.Vector3(0,0,1).applyQuaternion(tableGroup.quaternion);
+            const tableCollisionPoint = tableCenter.clone().add(tableForwardOffset.multiplyScalar(1)); 
+            
+            // Calculate current number of cells for dynamic scoring
+            const currentNumberOfActiveCells = activeDataRowIndices.length * tableHeaders.length;
+
+            for (let i = hoops.length - 1; i >= 0; i--) {
+                const hoop = hoops[i];
+                if (hoop.userData.passed) continue;
+                const hoopCenter = hoop.position;
+                const hoopRadius = hoop.userData.radius;
+                const hoopNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(hoop.quaternion); 
+                const vecToTable = tableCollisionPoint.clone().sub(hoopCenter);
+                const distAlongNormal = vecToTable.dot(hoopNormal);
+                const prevDistKey = `prevDist_${hoop.uuid}`;
+                const prevDist = tableFlightData[prevDistKey];
+
+                if (Math.abs(distAlongNormal) < hoopRadius * 0.8) { 
+                    const pointOnPlane = tableCollisionPoint.clone().sub(hoopNormal.clone().multiplyScalar(distAlongNormal));
+                    const distToCenterOnPlane = pointOnPlane.distanceTo(hoopCenter);
+                    if (distToCenterOnPlane < hoopRadius) { 
+                        if (prevDist !== undefined && Math.sign(prevDist) !== Math.sign(distAlongNormal) && Math.sign(prevDist) !== 0) {
+                            const tableFlightDirection = new THREE.Vector3(0,0,1).applyQuaternion(tableGroup.quaternion);
+                            const dotProduct = tableFlightDirection.dot(hoopNormal.clone().negate()); 
+                            if (dotProduct > 0.1) { 
+                                // Dynamic score calculation
+                                const cellMultiplier = 0.1 * currentNumberOfActiveCells;
+                                let pointsEarned = hoop.userData.basePoints * cellMultiplier;
+                                pointsEarned = Math.max(1, Math.round(pointsEarned)); // Ensure at least 1 point, and round
+
+                                score += pointsEarned;
+                                document.getElementById('score-display').textContent = `Score: ${score}`;
+                                checkAndDisplayRankUp(); 
+
+                                const effectColor = hoop.userData.isSpecial ? HOOP_PURPLE_COLOR.clone().lerp(new THREE.Color(0xffffff), 0.5) : HOOP_PASSED_EFFECT_COLOR;
+                                hoop.material.color.set(effectColor);
+                                hoop.material.emissive.set(effectColor);
+                                hoop.material.emissiveIntensity = 1.5;
+                                hoop.userData.passed = true; 
+                                setTimeout(() => {
+                                    hoopsGroup.remove(hoop);
+                                    if (hoop.geometry) hoop.geometry.dispose();
+                                    if (hoop.material) hoop.material.dispose();
+                                    delete tableFlightData[prevDistKey]; 
+                                }, 250); 
+                                hoops.splice(i, 1); 
+                                spawnNewHoop(); 
+                            }
+                        }
+                    }
+                }
+                tableFlightData[prevDistKey] = distAlongNormal; 
+            }
+            if (hoops.length < MAX_ACTIVE_HOOPS && !tableCrashed) {
+                spawnNewHoop();
+            }
+        }
+
+        function updateTableFlight(deltaTime) {
+            if (tableCrashed || !tableGroup) return;
+            const keys = tableFlightData.keys;
+            const rotationAmount = tableFlightData.maneuverSpeed * deltaTime;
+            const thrustChange = tableFlightData.thrust * deltaTime * 5; 
+            if (keys['KeyW']) tableGroup.rotateX(rotationAmount);  
+            if (keys['KeyS']) tableGroup.rotateX(-rotationAmount); 
+            if (keys['KeyA']) tableGroup.rotateY(rotationAmount);  
+            if (keys['KeyD']) tableGroup.rotateY(-rotationAmount); 
+            if (keys['KeyQ']) tableGroup.rotateZ(-rotationAmount); 
+            if (keys['KeyE']) tableGroup.rotateZ(rotationAmount);  
+            if (keys['ArrowUp']) { tableFlightData.currentSpeed += thrustChange; }
+            if (keys['ArrowDown']) { tableFlightData.currentSpeed -= thrustChange; }
+            tableFlightData.currentSpeed = Math.max(tableFlightData.minSpeed, Math.min(tableFlightData.maxSpeed, tableFlightData.currentSpeed));
+            const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(tableGroup.quaternion);
+            tableFlightData.velocity.copy(forward).multiplyScalar(tableFlightData.currentSpeed);
+            let lift = forward.y * tableFlightData.currentSpeed * tableFlightData.liftFactor * deltaTime;
+            tableFlightData.velocity.y += lift;
+            tableFlightData.velocity.y -= 9.8 * deltaTime * 0.5; 
+            if (keys['Space']) tableFlightData.velocity.y += tableFlightData.thrust * deltaTime * 0.5;
+            if (keys['KeyC']) tableFlightData.velocity.y -= tableFlightData.thrust * deltaTime * 0.5; 
+            tableGroup.position.addScaledVector(tableFlightData.velocity, deltaTime);
+             if (tableGroup.position.y < GROUND_LEVEL + (tableBoundingBox.getSize(new THREE.Vector3()).y / 2 * 0.8) && tableFlightData.velocity.y < 0) {
+                tableGroup.position.y = GROUND_LEVEL + (tableBoundingBox.getSize(new THREE.Vector3()).y / 2 * 0.8);
+            }
+            tableFlightData.position.copy(tableGroup.position);
+            tableFlightData.rotation.copy(tableGroup.quaternion);
+        }
+
+        function updateCamera() {
+            if (!tableGroup) return;
+            const cameraOffset = baseCameraOffset.clone().multiplyScalar(tableFlightData.cameraDistanceFactor);
+            const desiredOffset = cameraOffset.applyQuaternion(tableGroup.quaternion);
+            const desiredPosition = tableGroup.position.clone().add(desiredOffset);
+            let lerpFactor = 0.1;
+            const distanceToDesired = camera.position.distanceTo(desiredPosition);
+            if(distanceToDesired < 1 && tableFlightData.cameraDistanceFactor < 0.8) {
+                lerpFactor = 0.3;
+            }
+            if (distanceToDesired < 0.05) { 
+                 camera.position.copy(desiredPosition);
+            } else {
+                 camera.position.lerp(desiredPosition, lerpFactor);
+            }
+            const lookAtPosition = tableGroup.position.clone();
+            camera.lookAt(lookAtPosition);
+        }
+
+        function onMouseClick(event) {
+            if (tableCrashed || !gameActive) return; 
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            if (!tableGroup) return;
+            const intersects = raycaster.intersectObjects(tableGroup.children, true); 
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                if (intersectedObject.userData && intersectedObject.userData.isCell && intersectedObject.userData.rowIndex !== -1) { 
+                    const clickedRowIndex = intersectedObject.userData.rowIndex;
+                    if (highlightedRowIndex !== -1 && highlightedRowIndex !== clickedRowIndex) {
+                        tableGroup.children.forEach(cell => {
+                            if (cell.userData.isCell && cell.userData.rowIndex === highlightedRowIndex) {
+                                cell.material = cell.userData.originalMaterial; 
+                            }
+                        });
+                    }
+                    if (highlightedRowIndex === clickedRowIndex) { 
+                        tableGroup.children.forEach(cell => {
+                            if (cell.userData.isCell && cell.userData.rowIndex === clickedRowIndex) {
+                                cell.material = cell.userData.originalMaterial;
+                            }
+                        });
+                        highlightedRowIndex = -1;
+                    } else { 
+                        tableGroup.children.forEach(cell => {
+                            if (cell.userData.isCell && cell.userData.rowIndex === clickedRowIndex) {
+                                const highlightedMaterial = intersectedObject.userData.originalMaterial.clone();
+                                highlightedMaterial.color.set(HIGHLIGHT_COLOR); 
+                                cell.material = highlightedMaterial;
+                            }
+                        });
+                        highlightedRowIndex = clickedRowIndex;
+                    }
+                }
+            } else { 
+                if (highlightedRowIndex !== -1) { 
+                    tableGroup.children.forEach(cell => {
+                        if (cell.userData.isCell && cell.userData.rowIndex === highlightedRowIndex) {
+                            cell.material = cell.userData.originalMaterial;
+                        }
+                    });
+                    highlightedRowIndex = -1;
+                }
+            }
+        }
+        
+        function populateAllRanksList(){
+            const ul = document.getElementById('achievements-ul');
+            ul.innerHTML = ''; 
+            PLAYER_RANKS.forEach(rank => {
+                const li = document.createElement('li');
+                const titleSpan = document.createElement('span');
+                titleSpan.style.fontWeight = 'bold';
+                titleSpan.style.color = '#5DADE2'; 
+                titleSpan.textContent = rank.title;
+                const scoreSpan = document.createElement('span');
+                scoreSpan.style.fontSize = '0.8em';
+                scoreSpan.style.color = '#bdc3c7'; 
+                scoreSpan.textContent = ` (Score: ${rank.minScore}${rank.maxScore === 9999 ? '+' : ' - ' + rank.maxScore})`;
+                const fmeSpan = document.createElement('span');
+                fmeSpan.style.display = 'block'; 
+                fmeSpan.style.fontSize = '0.8em';
+                fmeSpan.style.color = '#82E0AA'; 
+                fmeSpan.style.marginLeft = '15px'; 
+                fmeSpan.style.fontStyle = 'italic';
+                fmeSpan.textContent = rank.fmeTransformer; 
+                li.appendChild(titleSpan);
+                li.appendChild(scoreSpan);
+                li.appendChild(fmeSpan);
+                ul.appendChild(li);
+            });
+        }
+
+        function init() {
+            document.getElementById('loading').style.display = 'block'; 
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x7EC0EE); 
+            scene.fog = new THREE.Fog(0x7EC0EE, 250, 900); 
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio); 
+            renderer.shadowMap.enabled = true; 
+            document.body.appendChild(renderer.domElement);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); 
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9); 
+            directionalLight.position.set(100, 150, 100);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 1024; 
+            directionalLight.shadow.mapSize.height = 1024;
+            directionalLight.shadow.camera.near = 50;
+            directionalLight.shadow.camera.far = 500;
+            directionalLight.shadow.camera.left = -200;
+            directionalLight.shadow.camera.right = 200;
+            directionalLight.shadow.camera.top = 200;
+            directionalLight.shadow.camera.bottom = -200;
+            scene.add(directionalLight);
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            buildTable();
+            createCity();
+            resetGame(); 
+            populateAllRanksList(); 
+
+            const toggleBtn = document.getElementById('toggleAchievementsButton');
+            const allAchievementsDiv = document.getElementById('all-achievements-list');
+            toggleBtn.addEventListener('click', () => {
+                if (allAchievementsDiv.style.display === 'none') {
+                    allAchievementsDiv.style.display = 'block';
+                    toggleBtn.textContent = 'Hide Player Ranks';
+                } else {
+                    allAchievementsDiv.style.display = 'none';
+                    toggleBtn.textContent = 'Show Player Ranks';
+                }
+            });
+            window.addEventListener('resize', onWindowResize, false);
+            document.getElementById('generateButton').addEventListener('click', () => {
+                document.getElementById('loading').style.display = 'block';
+                setTimeout(() => {
+                    buildTable(); // This will rebuild with the initial set of rows/cells
+                    createCity();
+                    resetGame();  // This resets score, activeDataRowIndices, etc.
+                    gameActive = true; 
+                    document.getElementById('loading').style.display = 'none';
+                }, 50);
+            });
+            renderer.domElement.addEventListener('click', onMouseClick, false); 
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('keyup', handleKeyUp);
+            renderer.domElement.addEventListener('wheel', handleMouseWheel, { passive: false }); 
+
+            document.getElementById('startGameButtonModal').addEventListener('click', () => {
+                document.getElementById('rules-modal').style.display = 'none';
+                localStorage.setItem('rulesShown', 'true');
+                gameActive = true; 
+                resetGame(); // Reset game for a fresh start after rules are dismissed
+                buildTable(); // Ensure table is built with its initial state for scoring
+            });
+
+            if (!localStorage.getItem('rulesShown')) {
+                document.getElementById('rules-modal').style.display = 'flex';
+                gameActive = false; 
+            } else {
+                gameActive = true; 
+            }
+
+            document.getElementById('loading').style.display = 'none'; 
+            
+            if (!animationLoopStarted) { 
+                animate();
+                animationLoopStarted = true;
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate); 
+
+            if (renderer && scene && camera) { 
+                if (gameActive && !tableCrashed) { 
+                    const deltaTime = clock.getDelta();
+                    updateTableFlight(deltaTime);
+                    checkHoopCollisions();
+                    checkCrashCollisions();
+
+                    if (score === 0) {
+                        rowDisappearTimer += deltaTime;
+                        if (rowDisappearTimer >= ROW_DISAPPEAR_INTERVAL) {
+                            removeRandomDataRow();
+                            rowDisappearTimer = 0; 
+                        }
+                    } else {
+                        rowDisappearTimer = 0; 
+                    }
+
+                    scoreDecayTimer += deltaTime;
+                    if (scoreDecayTimer >= SCORE_DECAY_INTERVAL) {
+                        if (score > 0) {
+                            score -= SCORE_DECAY_AMOUNT;
+                            score = Math.max(0, score); 
+                            document.getElementById('score-display').textContent = `Score: ${score}`;
+                            checkAndDisplayRankUp(); 
+                        }
+                        scoreDecayTimer = 0; 
+                    }
+                }
+                updateCamera();
+                renderer.render(scene, camera);
+            }
+        }
+        init();
+    </script>
+</body>
+</html>
