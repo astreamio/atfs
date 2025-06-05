@@ -3,6 +3,8 @@
 ### Description
 Transform your attribute tables into an interactive HTML-based flight simulator game! This custom transformer takes your FME attribute table and converts it into a dynamic gaming experience where you pilot the table itself.
 
+This is supposed to be used with FME custom transformer "AttributeTableFlightSimulator" that is found here: https://hub.safe.com/publishers/andreas-h/transformers/attributetableflightsimulator
+
 ### Input
 *   An attribute table.
 
@@ -14,6 +16,9 @@ The flight simulation will run smoother and be easier to win with fewer attribut
 
 ### Use With
 *   HTML Writer
+
+### Technology Used
+*   This project uses the third-party JavaScript library [Three.js](https://threejs.org/) to render the 3D graphics.
 
 ## Gameplay: How to Soar!
 
