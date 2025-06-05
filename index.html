@@ -763,7 +763,7 @@
                         if (prevDist !== undefined && Math.sign(prevDist) !== Math.sign(distAlongNormal) && Math.sign(prevDist) !== 0) {
                             const tableFlightDirection = new THREE.Vector3(0,0,1).applyQuaternion(tableGroup.quaternion);
                             const dotProduct = tableFlightDirection.dot(hoopNormal.clone().negate()); 
-                            if (dotProduct > 0.1) { 
+                            if (Math.abs(dotProduct) > 0.1) { 
                                 // Dynamic score calculation
                                 const cellMultiplier = 0.1 * currentNumberOfActiveCells;
                                 let pointsEarned = hoop.userData.basePoints * cellMultiplier;
